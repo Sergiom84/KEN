@@ -1,0 +1,215 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+:root {
+  /* Editorial Minimalista - Paleta Tierra Cálida */
+  --primary: #8B7355;
+  --primary-foreground: #F5F1ED;
+  --sidebar-primary: #A0826D;
+  --sidebar-primary-foreground: #F5F1ED;
+  --chart-1: #C4A57B;
+  --chart-2: #A0826D;
+  --chart-3: #8B7355;
+  --chart-4: #6B5344;
+  --chart-5: #4A3728;
+  --radius: 0.4rem;
+  --background: #F9F7F4;
+  --foreground: #3D3D3D;
+  --card: #FFFFFF;
+  --card-foreground: #3D3D3D;
+  --popover: #FFFFFF;
+  --popover-foreground: #3D3D3D;
+  --secondary: #E8DDD3;
+  --secondary-foreground: #5A5A5A;
+  --muted: #E8DDD3;
+  --muted-foreground: #8B8B8B;
+  --accent: #D4A574;
+  --accent-foreground: #FFFFFF;
+  --destructive: #C85A54;
+  --destructive-foreground: #FFFFFF;
+  --border: #E8DDD3;
+  --input: #F5F1ED;
+  --ring: #A0826D;
+  --sidebar: #F9F7F4;
+  --sidebar-foreground: #3D3D3D;
+  --sidebar-accent: #E8DDD3;
+  --sidebar-accent-foreground: #6B5344;
+  --sidebar-border: #E8DDD3;
+  --sidebar-ring: #A0826D;
+}
+
+.dark {
+  --primary: #C4A57B;
+  --primary-foreground: #1A1410;
+  --sidebar-primary: #D4B896;
+  --sidebar-foreground: #E8DDD3;
+  --background: #1A1410;
+  --foreground: #E8DDD3;
+  --card: #2A1F18;
+  --card-foreground: #E8DDD3;
+  --popover: #2A1F18;
+  --popover-foreground: #E8DDD3;
+  --secondary: #3D3028;
+  --secondary-foreground: #C4A57B;
+  --muted: #3D3028;
+  --muted-foreground: #A0826D;
+  --accent: #D4A574;
+  --accent-foreground: #1A1410;
+  --destructive: #E8826D;
+  --destructive-foreground: #1A1410;
+  --border: #3D3028;
+  --input: #2A1F18;
+  --ring: #D4A574;
+  --chart-1: #C4A57B;
+  --chart-2: #A0826D;
+  --chart-3: #8B7355;
+  --chart-4: #6B5344;
+  --chart-5: #4A3728;
+  --sidebar: #2A1F18;
+  --sidebar-accent: #3D3028;
+  --sidebar-accent-foreground: #D4A574;
+  --sidebar-border: #3D3028;
+  --sidebar-ring: #D4A574;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground font-serif;
+  }
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  [type="button"]:not(:disabled),
+  [type="submit"]:not(:disabled),
+  [type="reset"]:not(:disabled),
+  a[href],
+  select:not(:disabled),
+  input[type="checkbox"]:not(:disabled),
+  input[type="radio"]:not(:disabled) {
+    @apply cursor-pointer;
+  }
+  
+  /* Tipografía Editorial */
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-bold;
+  }
+  
+  h1 {
+    @apply text-4xl tracking-tight;
+  }
+  
+  h2 {
+    @apply text-3xl tracking-tight;
+  }
+  
+  h3 {
+    @apply text-2xl tracking-tight;
+  }
+  
+  p {
+    @apply leading-relaxed;
+  }
+}
+
+@layer components {
+  /* Fuentes personalizadas */
+  .font-serif {
+    font-family: 'Lora', serif;
+  }
+  
+  .font-sans {
+    font-family: 'Roboto', sans-serif;
+  }
+  
+  /**
+   * Custom container utility that centers content and adds responsive padding.
+   */
+  .container {
+    width: 100%;
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+
+  .flex {
+    min-height: 0;
+    min-width: 0;
+  }
+
+  @media (min-width: 640px) {
+    .container {
+      padding-left: 1.5rem;
+      padding-right: 1.5rem;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .container {
+      padding-left: 2rem;
+      padding-right: 2rem;
+      max-width: 1280px;
+    }
+  }
+  
+  /* Estilos editoriales */
+  .lesson-content {
+    @apply font-serif text-lg leading-relaxed text-foreground;
+    line-height: 1.8;
+  }
+  
+  .lesson-title {
+    @apply text-4xl font-bold text-foreground mb-8 mt-12;
+  }
+  
+  .lesson-divider {
+    @apply my-12 border-t border-border opacity-40;
+  }
+  
+  .page-number {
+    @apply text-xs text-muted-foreground font-sans tracking-widest;
+  }
+}
