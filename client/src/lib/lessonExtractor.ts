@@ -3,7 +3,8 @@
  * 
  * Funcionalidad:
  * - Detecta automáticamente todas las lecciones en un PDF
- * - Limpia referencias técnicas entre paréntesis y corchetes
+ * - Limpia los títulos eliminando texto entre corchetes (alternativas de ubicación)
+ * - Limpia referencias técnicas entre paréntesis y corchetes del contenido
  * - Separa palabras concatenadas por mala extracción del PDF
  * - Normaliza comillas tipográficas
  * - Formatea el contenido para presentación editorial
@@ -151,7 +152,7 @@ const COMMON_SPANISH_WORDS = new Set([
   'significativo', 'significativa', 'significativos', 'significativas',
   'verdadero', 'verdadera', 'verdaderos', 'verdaderas',
   'especial', 'abstracto', 'abstracta', 'específico', 'específica',
-  'variable', 'inmutable', 'irreal', 'ilusorio', 'ilusoria',
+  'variable', 'inmutable', 'irreal', 'ilusorio', 'ilusoria', 'inespecífica', 'inespecífico',
   'inherente', 'fugaz', 'aleatorio', 'aleatoria',
   'central', 'similar', 'útil', 'inútil', 'dañino', 'inofensivo',
   'difícil', 'difíciles', 'fácil', 'fáciles',
@@ -160,6 +161,22 @@ const COMMON_SPANISH_WORDS = new Set([
   // Palabras específicas del contexto de UCDM/Wapnick
   'dios', 'jesús', 'cristo', 'espíritu', 'percibimos', 'aprender',
   'renunciar', 'prestar', 'medida', 'nuestra', 'nuestro', 'nuestros', 'nuestras',
+  // Más palabras comunes que aparecen concatenadas en el PDF
+  'verdad', 'atención', 'aplicamos', 'aplicación', 'instrucción',
+  'definición', 'percepción', 'oración', 'relación', 'función',
+  'afirmación', 'descripción', 'corrección', 'conexión', 'acción',
+  'razón', 'emoción', 'ilusión', 'confusión', 'conclusión',
+  'decisión', 'revisión', 'visión', 'misión', 'expresión',
+  'situación', 'condición', 'posición', 'dirección', 'intención',
+  'información', 'comunicación', 'educación', 'creación', 'imaginación',
+  'observación', 'preparación', 'presentación', 'transformación',
+  'realización', 'interpretación', 'participación', 'demostración',
+  'significación', 'identificación', 'manifestación',
+  // Palabras que terminan en consonante frecuentemente pegadas con 'a'/'o'
+  'irreal', 'central', 'actual', 'normal', 'original', 'final',
+  'especial', 'material', 'espiritual', 'fundamental', 'universal',
+  'personal', 'general', 'natural', 'total', 'mental', 'principal',
+  'esencial', 'inicial', 'adicional', 'racional', 'emocional',
 ]);
 
 /**
@@ -183,13 +200,53 @@ export function splitMergedSpanishWords(text: string): string {
   // Preposiciones y conjunciones de una sola letra que frecuentemente se pegan
   const glueLetters = ['a', 'o', 'e', 'y', 'u'];
 
-  // Patrón: buscar palabras de 4+ caracteres que podrían contener una preposición pegada
-  // Sólo procesamos palabras en minúsculas para evitar falsos positivos con nombres propios
   let result = text;
 
+  // === Paso 1: Patrones explícitos de palabras conocidas que se concatenan ===
+  // Esto maneja casos como: verdada → verdad a, aplicamosa → aplicamos a,
+  // atencióna → atención a, etc.
+  const knownConcatenations: Array<{ pattern: RegExp; replacement: string }> = [
+    // Palabras que terminan en vocal acentuada + preposición 'a'
+    { pattern: /\b(atenci[óo]n)(a)\b/gi, replacement: '$1 $2' },
+    { pattern: /\b(percepci[óo]n)(a)\b/gi, replacement: '$1 $2' },
+    { pattern: /\b(aplicaci[óo]n)(a)\b/gi, replacement: '$1 $2' },
+    { pattern: /\b(instrucci[óo]n)(a)\b/gi, replacement: '$1 $2' },
+    { pattern: /\b(definici[óo]n)(a)\b/gi, replacement: '$1 $2' },
+    { pattern: /\b(oraci[óo]n)(a)\b/gi, replacement: '$1 $2' },
+    { pattern: /\b(relaci[óo]n)(a)\b/gi, replacement: '$1 $2' },
+    { pattern: /\b(afirmaci[óo]n)(a)\b/gi, replacement: '$1 $2' },
+    { pattern: /\b(separaci[óo]n)(a)\b/gi, replacement: '$1 $2' },
+    { pattern: /\b(salvaci[óo]n)(a)\b/gi, replacement: '$1 $2' },
+    { pattern: /\b(ilusi[óo]n)(a)\b/gi, replacement: '$1 $2' },
+    { pattern: /\b(raz[óo]n)(a)\b/gi, replacement: '$1 $2' },
+    { pattern: /\b(emoci[óo]n)(a)\b/gi, replacement: '$1 $2' },
+    { pattern: /\b(conexi[óo]n)(a)\b/gi, replacement: '$1 $2' },
+    { pattern: /\b(confusi[óo]n)(a)\b/gi, replacement: '$1 $2' },
+    { pattern: /\b(revisi[óo]n)(a)\b/gi, replacement: '$1 $2' },
+    { pattern: /\b(visi[óo]n)(a)\b/gi, replacement: '$1 $2' },
+    { pattern: /\b(decisi[óo]n)(a)\b/gi, replacement: '$1 $2' },
+    { pattern: /\b(expresi[óo]n)(a)\b/gi, replacement: '$1 $2' },
+    // Genérico: cualquier palabra que termine en -ción/-sión + 'a'
+    { pattern: /\b([a-záéíóúüñ]*(?:ci[óo]n|si[óo]n))(a)\s/gi, replacement: '$1 $2 ' },
+    // Palabras comunes + 'a'
+    { pattern: /\b(verdad)(a)\s/gi, replacement: '$1 $2 ' },
+    { pattern: /\b(aplicamos)(a)\b/gi, replacement: '$1 $2' },
+    { pattern: /\b(similar)(a)\s+(la|lo|los|las|un|una|mi|tu|su|nuestr|esta|ese|eso|el|nuestra|nuestro)\b/gi, replacement: '$1 $2 $3' },
+    { pattern: /\b(renunciar)(a)\s+(mi|tu|su|nuestr|esta|ese|la|lo|el|nuestra|nuestro)\b/gi, replacement: '$1 $2 $3' },
+    // Palabras + 'o' (conjunción)
+    { pattern: /\b(irreal)(o)\s/gi, replacement: '$1 $2 ' },
+    { pattern: /\b(central)(o)\s/gi, replacement: '$1 $2 ' },
+    { pattern: /\b(tres)(o)\s/gi, replacement: '$1 $2 ' },
+    // Genérico: palabra terminando en -al/-el/-il + 'o'
+    { pattern: /\b([a-záéíóúüñ]*(?:al|el|il))(o)\s/gi, replacement: '$1 $2 ' },
+  ];
+
+  for (const { pattern, replacement } of knownConcatenations) {
+    result = result.replace(pattern, replacement);
+  }
+
+  // === Paso 2: Algoritmo general para detectar concatenaciones ===
   for (const glue of glueLetters) {
-    // Patrón: una palabra que tiene la letra "glue" en medio,
-    // donde la parte izquierda y derecha son palabras conocidas
     const pattern = new RegExp(
       `\\b([a-záéíóúüñ]{3,})(${glue})([a-záéíóúüñ]{2,})\\b`,
       'g'
@@ -211,22 +268,28 @@ export function splitMergedSpanishWords(text: string): string {
         return `${left} ${mid} ${right}`;
       }
 
-      // Para la preposición "a": patrones especiales donde la izquierda termina 
-      // en consonante o en vocal acentuada y la derecha empieza en consonante
+      // Para la preposición "a" y conjunción "o": patrones especiales
       if (glue === 'a' || glue === 'o') {
-        // Si la parte izquierda termina en consonante típica de fin de palabra
-        // y la derecha empieza en consonante, es probable que estén pegadas
         const leftEndsConsonant = /[ndlrsz]$/i.test(leftLower);
         const rightStartsConsonant = /^[bcdfghjklmnñpqrstvwxyz]/i.test(rightLower);
 
-        if (leftIsWord && leftEndsConsonant && rightStartsConsonant && rightLower.length >= 3) {
+        if (leftIsWord && leftEndsConsonant && rightStartsConsonant && rightLower.length >= 2) {
           return `${left} ${mid} ${right}`;
         }
 
         // Si la parte izquierda termina en vocal acentuada (ción, sión, etc.)
         const leftEndsAccented = /[áéíóú]$/i.test(leftLower);
-        if (leftIsWord && leftEndsAccented && rightLower.length >= 3) {
+        if (leftIsWord && leftEndsAccented && rightLower.length >= 2) {
           return `${left} ${mid} ${right}`;
+        }
+
+        // Si left no está en el diccionario pero right sí, y left termina en
+        // una terminación típica de palabra española
+        if (!leftIsWord && rightIsWord && leftLower.length >= 4) {
+          const typicalEndings = /(?:ción|sión|dad|tad|mente|ble|ción|ismo|ista|ivo|iva|nte|dor|dora|ero|era)$/i;
+          if (typicalEndings.test(leftLower)) {
+            return `${left} ${mid} ${right}`;
+          }
         }
       }
 
@@ -234,8 +297,8 @@ export function splitMergedSpanishWords(text: string): string {
     });
   }
 
-  // Patrón especial: palabras que terminan con "mente" pegadas incorrectamente
-  // No es necesario aquí; "mente" normalmente es un sufijo válido.
+  // === Paso 3: Limpiar espacios múltiples resultantes ===
+  result = result.replace(/  +/g, ' ');
 
   return result;
 }
@@ -570,6 +633,24 @@ function extractHeaderSections(text: string): HeaderSection[] {
     const normalizedHeader = normalizeHeaderToken(headerLine);
     const isLesson = /^LECCI[ÓO]N/i.test(normalizedHeader);
 
+    // Filter out inline references that are not actual lesson headers.
+    // Real headers have format: "LECCIÓN X: Title text" with a meaningful title.
+    // Inline references like "Lección 5:" alone, or "lección 7 es esencialmente..."
+    // should be excluded.
+    if (isLesson) {
+      // Must have a colon followed by meaningful title text (at least 5 chars)
+      const hasColonWithTitle = /LECCI[ÓO]N\s+\d+\s*:\s*.{5,}/i.test(normalizedHeader);
+      if (!hasColonWithTitle) continue;
+      
+      // Reject if the title text looks like a sentence about the lesson rather than the title
+      // (e.g., "lección 7 es esencialmente un resumen de las seis lecciones anteriores")
+      // Real titles start with a capital letter and are short declarative phrases
+      const titleText = parsedHeader.title;
+      if (titleText && /^(es|son|era|fue|tiene|hay|como|donde|que|para)\s/i.test(titleText)) {
+        continue;
+      }
+    }
+
     sections.push({
       start: sectionStart,
       end: text.length,
@@ -584,6 +665,30 @@ function extractHeaderSections(text: string): HeaderSection[] {
   }
 
   return sections;
+}
+
+// ─────────────────────────────────────────────────────────────
+// Limpieza de títulos de lecciones
+// ─────────────────────────────────────────────────────────────
+
+/**
+ * Limpia el título de la lección eliminando el texto entre corchetes
+ * que representa alternativas de ubicación.
+ * 
+ * Ejemplo:
+ *   "Nada de lo que veo en esta habitación[en esta calle, desde esta ventana, en este lugar] significa nada"
+ *   → "Nada de lo que veo en esta habitación significa nada"
+ */
+function cleanLessonTitle(title: string): string {
+  // Eliminar contenido entre corchetes (alternativas de ubicación)
+  let cleaned = title.replace(/\[[^\]]*\]/g, '');
+  // Eliminar contenido entre paréntesis (referencias técnicas)
+  cleaned = cleaned.replace(/\([^)]*\)/g, '');
+  // Limpiar espacios múltiples y espacios antes de puntuación
+  cleaned = cleaned.replace(/\s+/g, ' ').replace(/\s+([,.;:!?])/g, '$1').trim();
+  // Eliminar punto final
+  cleaned = cleaned.replace(/\.+$/, '').trim();
+  return cleaned;
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -636,14 +741,17 @@ export function extractLessons(pdfText: string): Lesson[] {
       contentLines.shift();
     }
 
-    contentText = normalizeParagraphs(contentLines.join('\n'));
-    contentText = fixBrokenSpanishWords(contentText);
-    contentText = splitMergedSpanishWords(contentText);
+    // Formar párrafos del contenido completo
+    const fullContentText = normalizeParagraphs(contentLines.join('\n'));
 
-    // Limpiar título: normalizar comillas, eliminar referencias técnicas, 
-    // separar palabras pegadas
+    let contentResult = fullContentText;
+    contentResult = fixBrokenSpanishWords(contentResult);
+    contentResult = splitMergedSpanishWords(contentResult);
+
+    // Limpiar título: eliminar alternativas entre corchetes, normalizar comillas,
+    // eliminar referencias técnicas, separar palabras pegadas
     resolvedTitle = normalizeQuotes(resolvedTitle);
-    resolvedTitle = cleanTechnicalReferences(resolvedTitle);
+    resolvedTitle = cleanLessonTitle(resolvedTitle);
     resolvedTitle = fixBrokenSpanishWords(resolvedTitle);
     resolvedTitle = splitMergedSpanishWords(resolvedTitle);
 
@@ -653,7 +761,7 @@ export function extractLessons(pdfText: string): Lesson[] {
     lessons.push({
       number: section.parsedHeader.number,
       title: resolvedTitle,
-      content: contentText,
+      content: contentResult,
       rawContent: rawLessonText
     });
   }
